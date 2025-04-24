@@ -1,28 +1,36 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
+import gradio as gr
 from models import train_model
 from utils import mask_pii
 import joblib
 import os
 
-app = FastAPI()
-
+# Train if model is missing
 if not os.path.exists("model/classifier.pkl"):
     train_model()
 
+# Load the model
 model = joblib.load("model/classifier.pkl")
 
-class EmailRequest(BaseModel):
-    email: str
-
-@app.post("/classify")
-def classify_email(data: EmailRequest):
-    masked_email, pii_entities, _ = mask_pii(data.email)
+def classify_email(email):
+    masked_email, pii_entities, _ = mask_pii(email)
     category = model.predict([masked_email])[0]
+    
+    return email, str(pii_entities), masked_email, category
 
-    return {
-        "input_email_body": data.email,
-        "list_of_masked_entities": pii_entities,
-        "masked_email": masked_email,
-        "category_of_the_email": category
-    }
+# Define Gradio API endpoint
+def create_gradio_api():
+    api = gr.Interface(
+        fn=classify_email,
+        inputs=gr.Textbox(lines=10, label="Enter Email"),
+        outputs=[
+            gr.Textbox(label="Input Email Body"),
+            gr.Textbox(label="List of Masked Entities"),
+            gr.Textbox(label="Masked Email"),
+            gr.Textbox(label="Category of the Email")
+        ],
+        title="Email Classifier with PII Masking",
+        description="Classifies email content and masks personally identifiable information (PII).",
+        live=True,
+    )
+
+    return api

@@ -1,7 +1,7 @@
-fastapi
+gradio
 uvicorn
 scikit-learn
 pandas
 spacy
-python-multipart
-email-validator
+pydantic
+joblib
